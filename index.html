@@ -25,7 +25,7 @@
     --radius:14px;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  html,body{height:100dvh;}
+  html,body{height:100%;}
   body{
     margin:0;
     background:
@@ -93,8 +93,8 @@
   }
   #board{
     display:grid;
-    gap:3px;
-    padding:10px;
+    gap:4px;
+    padding:8px;
     background:var(--panel);
     border-radius:16px;
     box-shadow:0 20px 40px -20px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(238,230,216,0.05);
@@ -381,7 +381,7 @@
       ],
       player:{x:1,y:2,type:'pawn'},
       enemies:[ {x:0,y:0,type:'knight'} ],
-      moveLimit:4
+      moveLimit:2
     },
     {
       name:'Круглый двор',
@@ -398,25 +398,7 @@
         {x:2,y:1,type:'rook'},
         {x:2,y:0,type:'bishop'}
       ],
-      moveLimit:5
-    },
-    {
-      name:'Разлом',
-      shape:[
-        '#######',
-        '#######',
-        '###.###',
-        '#######',
-        '#######'
-      ],
-      player:{x:3,y:4,type:'pawn'},
-      enemies:[
-        {x:2,y:3,type:'knight'},
-        {x:1,y:1,type:'rook'},
-        {x:5,y:1,type:'bishop'},
-        {x:6,y:2,type:'queen'}
-      ],
-      moveLimit:6
+      moveLimit:3
     },
     {
       name:'Ловушка короля',
@@ -436,28 +418,25 @@
         {x:0,y:3,type:'bishop'},
         {x:2,y:5,type:'king'}
       ],
-      moveLimit:6
+      moveLimit:4
     },
     {
-      name:'Большой крест',
+      name:'Разлом',
       shape:[
-        '..###..',
-        '..###..',
         '#######',
         '#######',
+        '###.###',
         '#######',
-        '..###..',
-        '..###..'
+        '#######'
       ],
-      player:{x:3,y:6,type:'pawn'},
+      player:{x:3,y:4,type:'pawn'},
       enemies:[
-        {x:2,y:5,type:'knight'},
-        {x:3,y:3,type:'rook'},
-        {x:6,y:3,type:'bishop'},
-        {x:3,y:0,type:'queen'},
-        {x:0,y:3,type:'king'}
+        {x:2,y:3,type:'knight'},
+        {x:1,y:1,type:'bishop'},
+        {x:3,y:1,type:'rook'},
+        {x:4,y:2,type:'queen'}
       ],
-      moveLimit:7
+      moveLimit:4
     },
     {
       name:'Два двора',
@@ -468,15 +447,15 @@
         '####.####',
         '####.####'
       ],
-      player:{x:1,y:4,type:'pawn'},
+      player:{x:1,y:4,type:'knight'},
       enemies:[
-        {x:0,y:3,type:'knight'},
+        {x:2,y:3,type:'knight'},
         {x:1,y:1,type:'rook'},
-        {x:6,y:2,type:'bishop'},
-        {x:8,y:4,type:'queen'},
+        {x:5,y:3,type:'bishop'},
+        {x:6,y:4,type:'queen'},
         {x:5,y:4,type:'king'}
       ],
-      moveLimit:9
+      moveLimit:7
     },
     {
       name:'Волчий прыжок',
@@ -492,11 +471,35 @@
       player:{x:4,y:6,type:'pawn'},
       enemies:[
         {x:3,y:5,type:'rook'},
-        {x:2,y:3,type:'king'},
+        {x:3,y:4,type:'pawn'},
+        {x:2,y:3,type:'knight'},
         {x:3,y:2,type:'knight'},
+        {x:6,y:5,type:'bishop'},
         {x:2,y:0,type:'queen'}
       ],
       moveLimit:7
+    },
+    {
+      name:'Серпантин',
+      shape:[
+        '########',
+        '#.......',
+        '########',
+        '.......#',
+        '########',
+        '#.......',
+        '########'
+      ],
+      player:{x:1,y:6,type:'pawn'},
+      enemies:[
+        {x:0,y:5,type:'knight'},
+        {x:2,y:6,type:'knight'},
+        {x:2,y:4,type:'knight'},
+        {x:1,y:2,type:'knight'},
+        {x:7,y:0,type:'knight'},
+        {x:3,y:2,type:'rook'}
+      ],
+      moveLimit:10
     },
     {
       name:'Западня',
@@ -509,16 +512,18 @@
         '#######',
         '#######'
       ],
-      player:{x:3,y:6,type:'pawn'},
+      player:{x:3,y:3,type:'queen'},
       enemies:[
-        {x:2,y:5,type:'knight'},
+        {x:2,y:2,type:'rook'},
         {x:4,y:4,type:'pawn'},
-        {x:0,y:4,type:'rook'},
-        {x:0,y:1,type:'bishop'},
-        {x:5,y:6,type:'queen'},
-        {x:6,y:6,type:'king'}
+        {x:4,y:2,type:'pawn'},
+        {x:2,y:4,type:'pawn'},
+        {x:3,y:1,type:'knight'},
+        {x:3,y:5,type:'knight'},
+        {x:1,y:3,type:'knight'},
+        {x:5,y:3,type:'knight'},
       ],
-      moveLimit:9
+      moveLimit:11
     },
     {
       name:'Полнолуние',
@@ -568,131 +573,7 @@
         {x:5,y:1,type:'pawn'},
         {x:7,y:4,type:'knight'}
       ],
-      moveLimit:14
-    },
-    {
-      name:'Серпантин',
-      shape:[
-        '########',
-        '#.......',
-        '########',
-        '.......#',
-        '########',
-        '#.......',
-        '########'
-      ],
-      player:{x:1,y:6,type:'pawn'},
-      enemies:[
-        {x:0,y:5,type:'knight'},
-        {x:2,y:4,type:'rook'},
-        {x:7,y:4,type:'queen'},
-        {x:4,y:2,type:'rook'},
-        {x:0,y:2,type:'bishop'}
-      ],
-      moveLimit:8
-    },
-    {
-      name:'Два моста',
-      shape:[
-        '#####...#####',
-        '#############',
-        '#####...#####',
-        '#############',
-        '#####...#####'
-      ],
-      player:{x:2,y:4,type:'pawn'},
-      enemies:[
-        {x:1,y:3,type:'knight'},
-        {x:3,y:1,type:'rook'},
-        {x:10,y:1,type:'bishop'},
-        {x:12,y:3,type:'queen'},
-        {x:11,y:4,type:'king'},
-        {x:10,y:4,type:'rook'},
-        {x:8,y:4,type:'pawn'}
-      ],
       moveLimit:12
-    },
-    {
-      name:'Кратеры',
-      shape:[
-        '##########',
-        '##.####.##',
-        '#####.####',
-        '########.#',
-        '###.######',
-        '######.###',
-        '#..#.##.##',
-        '##########'
-      ],
-      player:{x:1,y:7,type:'pawn'},
-      enemies:[
-        {x:0,y:6,type:'knight'},
-        {x:1,y:4,type:'rook'},
-        {x:1,y:1,type:'bishop'},
-        {x:6,y:6,type:'queen'},
-        {x:6,y:7,type:'king'},
-        {x:5,y:6,type:'knight'},
-        {x:6,y:4,type:'rook'},
-        {x:9,y:4,type:'pawn'}
-      ],
-      moveLimit:9
-    },
-    {
-      name:'Гон',
-      shape:[
-        '..######..',
-        '..######..',
-        '##########',
-        '##########',
-        '##########',
-        '##########',
-        '##########',
-        '..######..',
-        '..######..'
-      ],
-      player:{x:4,y:8,type:'pawn'},
-      enemies:[
-        {x:3,y:7,type:'knight'},
-        {x:7,y:6,type:'rook'},
-        {x:2,y:5,type:'bishop'},
-        {x:8,y:4,type:'queen'},
-        {x:1,y:3,type:'king'},
-        {x:6,y:2,type:'pawn'},
-        {x:9,y:4,type:'knight'},
-        {x:0,y:4,type:'rook'},
-        {x:5,y:1,type:'bishop'}
-      ],
-      moveLimit:13
-    },
-    {
-      name:'Стая',
-      shape:[
-        '....#.....',
-        '..........',
-        '..######..',
-        '..######..',
-        '##########',
-        '##########',
-        '##########',
-        '##########',
-        '##########',
-        '..######..',
-        '..######..'
-      ],
-      player:{x:4,y:10,type:'pawn'},
-      enemies:[
-        {x:3,y:9,type:'knight'},
-        {x:7,y:8,type:'rook'},
-        {x:2,y:7,type:'bishop'},
-        {x:8,y:6,type:'queen'},
-        {x:1,y:5,type:'king'},
-        {x:6,y:4,type:'pawn'},
-        {x:5,y:2,type:'knight'},
-        {x:0,y:6,type:'rook'},
-        {x:5,y:3,type:'bishop'},
-        {x:4,y:0,type:'queen'}
-      ],
-      moveLimit:15
     }
   ];
 
@@ -841,7 +722,7 @@
     haptic('lose');
     if(reason === 'stuck'){
       document.getElementById('lose-title').textContent = 'Тупик';
-      document.getElementById('lose-text').textContent = 'У текущей фигуры больше нет ходов, а на доске ещё остались враги. Попробуйте другой порядок захвата.';
+      document.getElementById('lose-text').textContent = 'У текущей фигуры больше нет ходов, а на доске ещё остались враги.';
     } else {
       document.getElementById('lose-title').textContent = 'Ходы закончились';
       document.getElementById('lose-text').textContent = 'Лимит ходов исчерпан, а на доске ещё остались вражеские фигуры.';
@@ -862,7 +743,7 @@
   function render(rebuildGrid){
     var level = LEVELS[currentLevelIdx];
     var dims = boardDims(level);
-    document.getElementById('level-name').textContent = level.name;
+    document.getElementById('level-name').textContent = currentLevelIdx + 1 + ': ' + level.name;
     document.getElementById('moves-value').textContent = state.moves + ' / ' + level.moveLimit;
     var mv = document.getElementById('moves-value');
     mv.classList.toggle('warn', state.moves >= level.moveLimit - 1 && state.status==='playing');
@@ -883,7 +764,7 @@
     // compute cell size to fit viewport width
     var maxBoardWidth = Math.min(document.getElementById('board-wrap').clientWidth || 460, 460);
     cellSize = Math.floor(Math.min(56, (maxBoardWidth - (dims.w+1)*3 - 20) / dims.w));
-    cellSize = Math.max(cellSize, 30);
+    cellSize = Math.max(cellSize, 28);
     boardEl.style.setProperty('--cell-size', cellSize + 'px');
     boardEl.style.gridTemplateColumns = 'repeat(' + dims.w + ', var(--cell-size))';
     boardEl.style.gridTemplateRows = 'repeat(' + dims.h + ', var(--cell-size))';
