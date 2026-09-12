@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Chessn't</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14161f;
+    --panel:#1b1e2a;
+    --sq-dark:#242838;
+    --sq-light:#2f3548;
+    --sq-dark-hi:#2c3350;
+    --sq-light-hi:#3a4262;
+    --brass:#d8b463;
+    --brass-dim:#8d764a;
+    --ember:#c1543f;
+    --ember-dim:#7a3730;
+    --parchment:#eee6d8;
+    --parchment-dim:#a8a3ac;
+    --good:#7fae6b;
+    --radius:14px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 50% -10%, #232640 0%, var(--ink) 55%);
+    color:var(--parchment);
+    font-family:'Inter',system-ui,sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0);
+    overscroll-behavior:none;
+    user-select:none;
+  }
+  h1,h2,h3{font-family:'Fraunces',serif; margin:0; letter-spacing:.2px;}
+
+  #app{
+    width:100%;
+    max-width:520px;
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+    padding:14px 16px 18px;
+  }
+
+  /* ---------- header ---------- */
+  header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    padding-bottom:10px;
+    border-bottom:1px solid rgba(238,230,216,0.08);
+    margin-bottom:14px;
+  }
+  header .title-block h1{font-size:20px; font-weight:600; color:var(--parchment);}
+  header .title-block .level-name{font-size:13px; color:var(--brass); margin-top:2px;}
+  header .icon-btn{
+    background:none;border:1px solid rgba(238,230,216,0.18);
+    color:var(--parchment-dim); border-radius:50%;
+    width:32px;height:32px; font-family:'Fraunces',serif; font-size:15px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+
+  /* ---------- status row ---------- */
+  #status-row{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:14px; font-size:13px; color:var(--parchment-dim);
+  }
+  #status-row .stat{display:flex; align-items:center; gap:6px;}
+  #status-row .stat b{color:var(--parchment); font-weight:600; font-size:14px;}
+  #moves-value.warn{color:var(--ember);}
+  .enemy-dot{
+    display:inline-block; width:9px; height:9px; border-radius:50%;
+    background:var(--ember); margin-right:1px;
+  }
+  .enemy-dot.spent{background:rgba(238,230,216,0.15);}
+
+  /* ---------- board ---------- */
+  #board-wrap{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:6px 0 18px;
+  }
+  #board{
+    display:grid;
+    gap:3px;
+    padding:10px;
+    background:var(--panel);
+    border-radius:16px;
+    box-shadow:0 20px 40px -20px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(238,230,216,0.05);
+  }
+  .cell{
+    position:relative;
+    width:var(--cell-size);
+    height:var(--cell-size);
+    border-radius:5px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:calc(var(--cell-size) * 0.62);
+    line-height:1;
+    transition:background .12s ease, transform .12s ease;
+  }
+  .cell.void{background:transparent;}
+  .cell.active.dark{background:var(--sq-dark);}
+  .cell.active.light{background:var(--sq-light);}
+  .cell.legal.dark{background:var(--sq-dark-hi); cursor:pointer;}
+  .cell.legal.light{background:var(--sq-light-hi); cursor:pointer;}
+  .cell.legal::after{
+    content:'';
+    position:absolute;
+    width:22%; height:22%;
+    border-radius:50%;
+    background:var(--good);
+    opacity:.85;
+  }
+  .cell.legal.capture::after{
+    width:82%; height:82%;
+    background:none;
+    border:3px solid var(--ember);
+    opacity:.9;
+  }
+  .cell.legal:active{transform:scale(0.93);}
+  .piece{
+    position:relative;
+    z-index:2;
+    filter:drop-shadow(0 2px 3px rgba(0,0,0,0.5));
+  }
+  .piece.player{color:var(--brass);}
+  .piece.enemy{color:var(--ember);}
+  .piece.pop{animation:pop .28s ease;}
+  @keyframes pop{
+    0%{transform:scale(0.3) rotate(-8deg); opacity:0;}
+    70%{transform:scale(1.15) rotate(3deg);}
+    100%{transform:scale(1) rotate(0);}
+  }
+  .cell.just-vacated::before{
+    content:'';
+    position:absolute; inset:18%;
+    border-radius:50%;
+    border:2px dashed rgba(216,180,99,0.35);
+  }
+
+  /* ---------- piece info ---------- */
+  #piece-info{
+    display:flex; align-items:center; justify-content:center;
+    gap:10px;
+    background:var(--panel);
+    border-radius:12px;
+    padding:12px 14px;
+    margin-bottom:12px;
+  }
+  #piece-info .glyph{font-size:26px; color:var(--brass);}
+  #piece-info .text{font-size:13px; color:var(--parchment-dim); text-align:left;}
+  #piece-info .text b{color:var(--parchment); font-family:'Fraunces',serif; font-size:15px; font-weight:600; display:block;}
+
+  /* ---------- controls ---------- */
+  #controls{display:flex; gap:10px;}
+  .btn{
+    flex:1;
+    padding:12px 10px;
+    border-radius:12px;
+    border:none;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:14px;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .btn.secondary{background:var(--panel); color:var(--parchment); border:1px solid rgba(238,230,216,0.12);}
+  .btn.primary{background:var(--brass); color:#241c0d;}
+  .btn:active{opacity:.8;}
+
+  /* ---------- overlay / modal ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(10,11,16,0.72);
+    overflow-y: auto;
+    backdrop-filter:blur(3px);
+    display:flex; justify-content:center;
+    padding:24px; z-index:50;
+    opacity:0; pointer-events:none; transition:opacity .18s ease;
+  }
+  .overlay.show{opacity:1; pointer-events:auto;}
+  .modal{
+    background:var(--panel);
+    height: fit-content;
+    border-radius:18px;
+    padding:26px 22px;
+    max-width:400px; width:100%;
+    text-align:center;
+    box-shadow:0 30px 60px -20px rgba(0,0,0,0.7);
+    border:1px solid rgba(238,230,216,0.08);
+  }
+  .modal .big-glyph{font-size:46px; margin-bottom:8px;}
+  .modal h2{font-size:22px; margin-bottom:6px;}
+  .modal p{font-size:14px; color:var(--parchment-dim); margin:0 0 18px; line-height:1.5;}
+  .modal .row{display:flex; gap:10px;}
+
+  /* ---------- level select ---------- */
+  #level-list{display:flex; flex-direction:column; gap:8px; margin:16px 0; text-align:left;}
+  .level-item{
+    display:flex; align-items:center; gap:12px;
+    background:rgba(238,230,216,0.04);
+    border:1px solid rgba(238,230,216,0.08);
+    border-radius:12px;
+    padding:10px 14px;
+    cursor:pointer;
+  }
+  .level-item.locked{opacity:.4; cursor:not-allowed;}
+  .level-item .num{
+    font-family:'Fraunces',serif; font-weight:700; font-size:16px;
+    color:var(--brass); width:22px; text-align:center;
+  }
+  .level-item .info{flex:1;}
+  .level-item .info .lname{font-size:14px; font-weight:600; color:var(--parchment);}
+  .level-item .info .lbest{font-size:12px; color:var(--parchment-dim); margin-top:1px;}
+
+  /* ---------- help ---------- */
+  #help-body{text-align:left; font-size:13.5px; color:var(--parchment-dim); line-height:1.6;}
+  #help-body b{color:var(--parchment);}
+  #help-body .step{display:flex; gap:10px; margin-bottom:10px;}
+  #help-body .step .g{font-size:20px; width:26px; text-align:center; flex-shrink:0;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="title-block">
+      <h1>Chessn't</h1>
+      <div class="level-name" id="level-name">—</div>
+    </div>
+    <button class="icon-btn" id="help-btn" aria-label="Правила">?</button>
+  </header>
+
+  <div id="status-row">
+    <div class="stat">Ходы&nbsp;<b id="moves-value">0 / 0</b></div>
+    <div class="stat" id="enemy-dots"></div>
+  </div>
+
+  <div id="board-wrap">
+    <div id="board"></div>
+  </div>
+
+  <div id="piece-info">
+    <div class="glyph" id="piece-glyph">♙</div>
+    <div class="text"><b id="piece-name">Пешка</b><span id="piece-hint">Ходит на клетку вперёд, бьёт по диагонали</span></div>
+  </div>
+
+  <div id="controls">
+    <button class="btn secondary" id="restart-btn">↺ Заново</button>
+    <button class="btn secondary" id="levels-btn">☰ Уровни</button>
+  </div>
+
+</div>
+
+<!-- Win modal -->
+<div class="overlay" id="win-overlay">
+  <div class="modal">
+    <div class="big-glyph">♛</div>
+    <h2>Поле зачищено</h2>
+    <p id="win-text">Все фигуры захвачены за 0 ходов.</p>
+    <div class="row">
+      <button class="btn secondary" id="win-replay">Ещё раз</button>
+      <button class="btn primary" id="win-next">Дальше →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lose modal -->
+<div class="overlay" id="lose-overlay">
+  <div class="modal">
+    <div class="big-glyph" style="color:var(--ember)">♚</div>
+    <h2 id="lose-title">Ходы закончились</h2>
+    <p id="lose-text">Лимит ходов исчерпан, а на доске ещё остались вражеские фигуры.</p>
+    <div class="row">
+      <button class="btn primary" id="lose-retry">Попробовать снова</button>
+    </div>
+  </div>
+</div>
+
+<!-- Level select modal -->
+<div class="overlay" id="levels-overlay">
+  <div class="modal">
+    <h2>Уровни</h2>
+    <div id="level-list"></div>
+    <button class="btn secondary" id="levels-close">Закрыть</button>
+  </div>
+</div>
+
+<!-- Help modal -->
+<div class="overlay" id="help-overlay">
+  <div class="modal">
+    <h2>Правила</h2>
+    <div id="help-body">
+      <div class="step"><div class="g">♙</div><div>Ты управляешь одной фигурой. Она ходит только так, как ей положено в шахматах.</div></div>
+      <div class="step"><div class="g">♞</div><div><b>Съешь фигуру — стань ей.</b> Захватив вражескую фигуру, ты превращаешься в неё и получаешь её ходы.</div></div>
+      <div class="step"><div class="g">⏱</div><div>На каждом уровне есть лимит ходов. Не уложился — начинай заново.</div></div>
+    </div>
+    <button class="btn primary" id="help-close" style="margin-top:16px;">Понятно</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ===================== Telegram WebApp glue ===================== */
+  var tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+  if (tg) {
+    try {
+      tg.ready();
+      tg.expand();
+      if (tg.setHeaderColor) tg.setHeaderColor('#14161f');
+      if (tg.setBackgroundColor) tg.setBackgroundColor('#14161f');
+    } catch(e){}
+  }
+  function haptic(kind){
+    try{
+      if(!tg || !tg.HapticFeedback) return;
+      if(kind==='capture') tg.HapticFeedback.impactOccurred('medium');
+      else if(kind==='move') tg.HapticFeedback.impactOccurred('light');
+      else if(kind==='win') tg.HapticFeedback.notificationOccurred('success');
+      else if(kind==='lose') tg.HapticFeedback.notificationOccurred('error');
+    }catch(e){}
+  }
+
+  /* ===================== Persistence ===================== */
+  var STORAGE_KEY = 'chess_transform_progress_v1';
+  var progress = { unlocked: 1, best: {} };
+  (function loadProgress(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){ var parsed = JSON.parse(raw); if(parsed && typeof parsed==='object') progress = parsed; }
+    }catch(e){ /* storage unavailable, keep in-memory defaults */ }
+  })();
+  function saveProgress(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)); }catch(e){}
+  }
+
+  /* ===================== Piece data ===================== */
+  var GLYPH = {
+    pawn:   {w:'♙', b:'♟'},
+    knight: {w:'♘', b:'♞'},
+    bishop: {w:'♗', b:'♝'},
+    rook:   {w:'♖', b:'♜'},
+    queen:  {w:'♕', b:'♛'},
+    king:   {w:'♔', b:'♚'}
+  };
+  var NAME = {
+    pawn:'Пешка', knight:'Конь', bishop:'Слон', rook:'Ладья', queen:'Ферзь', king:'Король'
+  };
+  var HINT = {
+    pawn:'Ходит на клетку вперёд, бьёт по диагонали',
+    knight:'Прыгает буквой «Г», перепрыгивая пустоты',
+    bishop:'Скользит по диагоналям на любое число клеток',
+    rook:'Скользит по вертикали и горизонтали',
+    queen:'Скользит в любом из восьми направлений',
+    king:'Ходит на одну клетку в любом направлении'
+  };
+
+  /* ===================== Levels ===================== */
+  // '#' = playable cell, '.' = void. Forward for the pawn is -Y (upward).
+  var LEVELS = [
+    {
+      name:'Первый шаг',
+      shape:[
+        '###',
+        '###',
+        '###'
+      ],
+      player:{x:1,y:2,type:'pawn'},
+      enemies:[ {x:0,y:0,type:'knight'} ],
+      moveLimit:4
+    },
+    {
+      name:'Круглый двор',
+      shape:[
+        '.###.',
+        '#####',
+        '#####',
+        '#####',
+        '.###.'
+      ],
+      player:{x:2,y:4,type:'pawn'},
+      enemies:[
+        {x:1,y:3,type:'knight'},
+        {x:2,y:1,type:'rook'},
+        {x:2,y:0,type:'bishop'}
+      ],
+      moveLimit:5
+    },
+    {
+      name:'Разлом',
+      shape:[
+        '#######',
+        '#######',
+        '###.###',
+        '#######',
+        '#######'
+      ],
+      player:{x:3,y:4,type:'pawn'},
+      enemies:[
+        {x:2,y:3,type:'knight'},
+        {x:1,y:1,type:'rook'},
+        {x:5,y:1,type:'bishop'},
+        {x:6,y:2,type:'queen'}
+      ],
+      moveLimit:6
+    },
+    {
+      name:'Ловушка короля',
+      shape:[
+        '...#...',
+        '..###..',
+        '.#####.',
+        '#######',
+        '.#####.',
+        '..###..',
+        '...#...'
+      ],
+      player:{x:3,y:6,type:'pawn'},
+      enemies:[
+        {x:4,y:5,type:'knight'},
+        {x:5,y:3,type:'rook'},
+        {x:0,y:3,type:'bishop'},
+        {x:2,y:5,type:'king'}
+      ],
+      moveLimit:6
+    },
+    {
+      name:'Большой крест',
+      shape:[
+        '..###..',
+        '..###..',
+        '#######',
+        '#######',
+        '#######',
+        '..###..',
+        '..###..'
+      ],
+      player:{x:3,y:6,type:'pawn'},
+      enemies:[
+        {x:2,y:5,type:'knight'},
+        {x:3,y:3,type:'rook'},
+        {x:6,y:3,type:'bishop'},
+        {x:3,y:0,type:'queen'},
+        {x:0,y:3,type:'king'}
+      ],
+      moveLimit:7
+    },
+    {
+      name:'Два двора',
+      shape:[
+        '####.####',
+        '####.####',
+        '#########',
+        '####.####',
+        '####.####'
+      ],
+      player:{x:1,y:4,type:'pawn'},
+      enemies:[
+        {x:0,y:3,type:'knight'},
+        {x:1,y:1,type:'rook'},
+        {x:6,y:2,type:'bishop'},
+        {x:8,y:4,type:'queen'},
+        {x:5,y:4,type:'king'}
+      ],
+      moveLimit:9
+    },
+    {
+      name:'Волчий прыжок',
+      shape:[
+        '..#......',
+        '.........',
+        '..#####..',
+        '..#####..',
+        '..#####..',
+        '..#####..',
+        '..#####..'
+      ],
+      player:{x:4,y:6,type:'pawn'},
+      enemies:[
+        {x:3,y:5,type:'rook'},
+        {x:2,y:3,type:'king'},
+        {x:3,y:2,type:'knight'},
+        {x:2,y:0,type:'queen'}
+      ],
+      moveLimit:7
+    },
+    {
+      name:'Западня',
+      shape:[
+        '#######',
+        '#######',
+        '#######',
+        '#######',
+        '#######',
+        '#######',
+        '#######'
+      ],
+      player:{x:3,y:6,type:'pawn'},
+      enemies:[
+        {x:2,y:5,type:'knight'},
+        {x:4,y:4,type:'pawn'},
+        {x:0,y:4,type:'rook'},
+        {x:0,y:1,type:'bishop'},
+        {x:5,y:6,type:'queen'},
+        {x:6,y:6,type:'king'}
+      ],
+      moveLimit:9
+    },
+    {
+      name:'Полнолуние',
+      shape:[
+        '.....#.....',
+        '....###....',
+        '...####....',
+        '..####.....',
+        '.####......',
+        '..####.....',
+        '...####....',
+        '....###....',
+        '.....#.....'
+      ],
+      player:{x:5,y:8,type:'pawn'},
+      enemies:[
+        {x:4,y:7,type:'knight'},
+        {x:3,y:5,type:'rook'},
+        {x:6,y:2,type:'bishop'},
+        {x:1,y:4,type:'queen'},
+        {x:5,y:0,type:'king'},
+        {x:6,y:6,type:'pawn'},
+        {x:2,y:3,type:'knight'}
+      ],
+      moveLimit:14
+    },
+    {
+      name:'Большая арена',
+      shape:[
+        '..#####..',
+        '..#####..',
+        '#########',
+        '#########',
+        '#########',
+        '#########',
+        '#########',
+        '..#####..',
+        '..#####..'
+      ],
+      player:{x:4,y:8,type:'pawn'},
+      enemies:[
+        {x:3,y:7,type:'knight'},
+        {x:6,y:6,type:'rook'},
+        {x:2,y:4,type:'bishop'},
+        {x:7,y:3,type:'queen'},
+        {x:1,y:2,type:'king'},
+        {x:5,y:1,type:'pawn'},
+        {x:7,y:4,type:'knight'}
+      ],
+      moveLimit:14
+    },
+    {
+      name:'Серпантин',
+      shape:[
+        '########',
+        '#.......',
+        '########',
+        '.......#',
+        '########',
+        '#.......',
+        '########'
+      ],
+      player:{x:1,y:6,type:'pawn'},
+      enemies:[
+        {x:0,y:5,type:'knight'},
+        {x:2,y:4,type:'rook'},
+        {x:7,y:4,type:'queen'},
+        {x:4,y:2,type:'rook'},
+        {x:0,y:2,type:'bishop'}
+      ],
+      moveLimit:8
+    },
+    {
+      name:'Два моста',
+      shape:[
+        '#####...#####',
+        '#############',
+        '#####...#####',
+        '#############',
+        '#####...#####'
+      ],
+      player:{x:2,y:4,type:'pawn'},
+      enemies:[
+        {x:1,y:3,type:'knight'},
+        {x:3,y:1,type:'rook'},
+        {x:10,y:1,type:'bishop'},
+        {x:12,y:3,type:'queen'},
+        {x:11,y:4,type:'king'},
+        {x:10,y:4,type:'rook'},
+        {x:8,y:4,type:'pawn'}
+      ],
+      moveLimit:12
+    },
+    {
+      name:'Кратеры',
+      shape:[
+        '##########',
+        '##.####.##',
+        '#####.####',
+        '########.#',
+        '###.######',
+        '######.###',
+        '#..#.##.##',
+        '##########'
+      ],
+      player:{x:1,y:7,type:'pawn'},
+      enemies:[
+        {x:0,y:6,type:'knight'},
+        {x:1,y:4,type:'rook'},
+        {x:1,y:1,type:'bishop'},
+        {x:6,y:6,type:'queen'},
+        {x:6,y:7,type:'king'},
+        {x:5,y:6,type:'knight'},
+        {x:6,y:4,type:'rook'},
+        {x:9,y:4,type:'pawn'}
+      ],
+      moveLimit:9
+    },
+    {
+      name:'Гон',
+      shape:[
+        '..######..',
+        '..######..',
+        '##########',
+        '##########',
+        '##########',
+        '##########',
+        '##########',
+        '..######..',
+        '..######..'
+      ],
+      player:{x:4,y:8,type:'pawn'},
+      enemies:[
+        {x:3,y:7,type:'knight'},
+        {x:7,y:6,type:'rook'},
+        {x:2,y:5,type:'bishop'},
+        {x:8,y:4,type:'queen'},
+        {x:1,y:3,type:'king'},
+        {x:6,y:2,type:'pawn'},
+        {x:9,y:4,type:'knight'},
+        {x:0,y:4,type:'rook'},
+        {x:5,y:1,type:'bishop'}
+      ],
+      moveLimit:13
+    },
+    {
+      name:'Стая',
+      shape:[
+        '....#.....',
+        '..........',
+        '..######..',
+        '..######..',
+        '##########',
+        '##########',
+        '##########',
+        '##########',
+        '##########',
+        '..######..',
+        '..######..'
+      ],
+      player:{x:4,y:10,type:'pawn'},
+      enemies:[
+        {x:3,y:9,type:'knight'},
+        {x:7,y:8,type:'rook'},
+        {x:2,y:7,type:'bishop'},
+        {x:8,y:6,type:'queen'},
+        {x:1,y:5,type:'king'},
+        {x:6,y:4,type:'pawn'},
+        {x:5,y:2,type:'knight'},
+        {x:0,y:6,type:'rook'},
+        {x:5,y:3,type:'bishop'},
+        {x:4,y:0,type:'queen'}
+      ],
+      moveLimit:15
+    }
+  ];
+
+  /* ===================== Board helpers ===================== */
+  function isActive(level, x, y){
+    if(y<0 || y>=level.shape.length) return false;
+    var row = level.shape[y];
+    if(x<0 || x>=row.length) return false;
+    return row.charAt(x) === '#';
+  }
+  function boardDims(level){
+    var h = level.shape.length, w = 0;
+    for(var i=0;i<h;i++) w = Math.max(w, level.shape[i].length);
+    return {w:w, h:h};
+  }
+  function enemyAt(state, x, y){
+    for(var i=0;i<state.enemies.length;i++){
+      var e = state.enemies[i];
+      if(e.x===x && e.y===y) return e;
+    }
+    return null;
+  }
+
+  function getLegalMoves(level, state){
+    var moves = [];
+    var p = state.player;
+    function tryPush(x,y){
+      if(!isActive(level,x,y)) return false; // false = stop (for sliders)
+      var e = enemyAt(state,x,y);
+      moves.push({x:x, y:y, capture: !!e});
+      return !e; // stop sliding once something occupies the square
+    }
+
+    if(p.type === 'pawn'){
+      var fx = p.x, fy = p.y - 1;
+      if(isActive(level,fx,fy) && !enemyAt(state,fx,fy)) moves.push({x:fx,y:fy,capture:false});
+      [-1,1].forEach(function(dx){
+        var cx = p.x+dx, cy = p.y-1;
+        if(isActive(level,cx,cy)){
+          var e = enemyAt(state,cx,cy);
+          if(e) moves.push({x:cx,y:cy,capture:true});
+        }
+      });
+    } else if(p.type === 'knight'){
+      var offs = [[1,2],[2,1],[2,-1],[1,-2],[-1,-2],[-2,-1],[-2,1],[-1,2]];
+      offs.forEach(function(o){
+        var nx=p.x+o[0], ny=p.y+o[1];
+        if(isActive(level,nx,ny)) moves.push({x:nx,y:ny,capture:!!enemyAt(state,nx,ny)});
+      });
+    } else if(p.type === 'king'){
+      for(var dx=-1;dx<=1;dx++){
+        for(var dy=-1;dy<=1;dy++){
+          if(dx===0 && dy===0) continue;
+          var nx=p.x+dx, ny=p.y+dy;
+          if(isActive(level,nx,ny)) moves.push({x:nx,y:ny,capture:!!enemyAt(state,nx,ny)});
+        }
+      }
+    } else {
+      var dirs;
+      if(p.type === 'rook') dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+      else if(p.type === 'bishop') dirs = [[1,1],[1,-1],[-1,1],[-1,-1]];
+      else dirs = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]; // queen
+      dirs.forEach(function(d){
+        var nx=p.x+d[0], ny=p.y+d[1];
+        while(isActive(level,nx,ny)){
+          var e = enemyAt(state,nx,ny);
+          moves.push({x:nx,y:ny,capture:!!e});
+          if(e) break;
+          nx+=d[0]; ny+=d[1];
+        }
+      });
+    }
+    return moves;
+  }
+
+  /* ===================== Game state ===================== */
+  var currentLevelIdx = 0;
+  var state = null;
+  var cellSize = 52;
+
+  function loadLevel(idx){
+    currentLevelIdx = idx;
+    var lvl = LEVELS[idx];
+    state = {
+      player: {x:lvl.player.x, y:lvl.player.y, type:lvl.player.type},
+      enemies: lvl.enemies.map(function(e){ return {x:e.x,y:e.y,type:e.type}; }),
+      moves: 0,
+      status: 'playing',
+      lastMoveFrom: null
+    };
+    hideAllOverlays();
+    render(true);
+  }
+
+  function attemptMove(x,y){
+    if(!state || state.status!=='playing') return;
+    var level = LEVELS[currentLevelIdx];
+    var legal = getLegalMoves(level, state);
+    var mv = null;
+    for(var i=0;i<legal.length;i++){ if(legal[i].x===x && legal[i].y===y){ mv = legal[i]; break; } }
+    if(!mv) return;
+
+    var from = {x:state.player.x, y:state.player.y};
+    state.moves++;
+
+    if(mv.capture){
+      var idx = -1;
+      for(var j=0;j<state.enemies.length;j++){ if(state.enemies[j].x===x && state.enemies[j].y===y){ idx=j; break; } }
+      var captured = state.enemies[idx];
+      state.enemies.splice(idx,1);
+      state.player.type = captured.type;
+      haptic('capture');
+    } else {
+      haptic('move');
+    }
+    state.player.x = x; state.player.y = y;
+    state.lastMoveFrom = from;
+
+    if(state.enemies.length === 0){
+      state.status = 'won';
+      onWin();
+    } else if(state.moves >= level.moveLimit){
+      state.status = 'lost';
+      onLose('limit');
+    } else if(getLegalMoves(level, state).length === 0){
+      // No legal moves left and enemies remain: a genuine dead end, distinct from running out of moves.
+      state.status = 'lost';
+      onLose('stuck');
+    }
+    render(false);
+  }
+
+  function onWin(){
+    haptic('win');
+    var lvl = LEVELS[currentLevelIdx];
+    var key = String(currentLevelIdx);
+    if(progress.best[key] === undefined || state.moves < progress.best[key]) progress.best[key] = state.moves;
+    if(progress.unlocked < currentLevelIdx + 2) progress.unlocked = currentLevelIdx + 2;
+    saveProgress();
+    document.getElementById('win-text').textContent =
+      'Все фигуры захвачены за ' + state.moves + ' ' + pluralMoves(state.moves) + ' из ' + lvl.moveLimit + ' допустимых.';
+    document.getElementById('win-next').style.display = (currentLevelIdx < LEVELS.length-1) ? 'flex' : 'none';
+    showOverlay('win-overlay');
+  }
+  function onLose(reason){
+    haptic('lose');
+    if(reason === 'stuck'){
+      document.getElementById('lose-title').textContent = 'Тупик';
+      document.getElementById('lose-text').textContent = 'У текущей фигуры больше нет ходов, а на доске ещё остались враги. Попробуйте другой порядок захвата.';
+    } else {
+      document.getElementById('lose-title').textContent = 'Ходы закончились';
+      document.getElementById('lose-text').textContent = 'Лимит ходов исчерпан, а на доске ещё остались вражеские фигуры.';
+    }
+    showOverlay('lose-overlay');
+  }
+
+  function pluralMoves(n){
+    var n10 = n % 10, n100 = n % 100;
+    if(n10===1 && n100!==11) return 'ход';
+    if(n10>=2 && n10<=4 && (n100<10 || n100>=20)) return 'хода';
+    return 'ходов';
+  }
+
+  /* ===================== Rendering ===================== */
+  var boardEl = document.getElementById('board');
+
+  function render(rebuildGrid){
+    var level = LEVELS[currentLevelIdx];
+    var dims = boardDims(level);
+    document.getElementById('level-name').textContent = level.name;
+    document.getElementById('moves-value').textContent = state.moves + ' / ' + level.moveLimit;
+    var mv = document.getElementById('moves-value');
+    mv.classList.toggle('warn', state.moves >= level.moveLimit - 1 && state.status==='playing');
+
+    // enemy pip row
+    var totalEnemies = LEVELS[currentLevelIdx].enemies.length;
+    var dotsHtml = '';
+    for(var i=0;i<totalEnemies;i++){
+      dotsHtml += '<span class="enemy-dot' + (i < (totalEnemies - state.enemies.length) ? ' spent' : '') + '"></span>';
+    }
+    document.getElementById('enemy-dots').innerHTML = dotsHtml;
+
+    // piece info
+    document.getElementById('piece-glyph').textContent = GLYPH[state.player.type].w;
+    document.getElementById('piece-name').textContent = NAME[state.player.type];
+    document.getElementById('piece-hint').textContent = HINT[state.player.type];
+
+    // compute cell size to fit viewport width
+    var maxBoardWidth = Math.min(document.getElementById('board-wrap').clientWidth || 460, 460);
+    cellSize = Math.floor(Math.min(56, (maxBoardWidth - (dims.w+1)*3 - 20) / dims.w));
+    cellSize = Math.max(cellSize, 30);
+    boardEl.style.setProperty('--cell-size', cellSize + 'px');
+    boardEl.style.gridTemplateColumns = 'repeat(' + dims.w + ', var(--cell-size))';
+    boardEl.style.gridTemplateRows = 'repeat(' + dims.h + ', var(--cell-size))';
+
+    var legalMoves = state.status==='playing' ? getLegalMoves(level, state) : [];
+    function legalAt(x,y){
+      for(var i=0;i<legalMoves.length;i++) if(legalMoves[i].x===x && legalMoves[i].y===y) return legalMoves[i];
+      return null;
+    }
+
+    if(rebuildGrid) boardEl.innerHTML = '';
+    var frag = rebuildGrid ? document.createDocumentFragment() : null;
+
+    for(var y=0;y<dims.h;y++){
+      for(var x=0;x<dims.w;x++){
+        var cellEl;
+        if(rebuildGrid){
+          cellEl = document.createElement('div');
+          cellEl.dataset.x = x; cellEl.dataset.y = y;
+          frag.appendChild(cellEl);
+        } else {
+          cellEl = boardEl.querySelector('[data-x="'+x+'"][data-y="'+y+'"]');
+        }
+        var active = isActive(level, x, y);
+        var shade = ((x+y) % 2 === 0) ? 'dark' : 'light';
+        var lm = active ? legalAt(x,y) : null;
+        var cls = 'cell';
+        if(active){
+          cls += ' active ' + shade;
+          if(lm) cls += ' legal' + (lm.capture ? ' capture' : '');
+        } else {
+          cls += ' void';
+        }
+        if(state.lastMoveFrom && state.lastMoveFrom.x===x && state.lastMoveFrom.y===y) cls += ' just-vacated';
+        cellEl.className = cls;
+
+        var innerHtml = '';
+        if(active){
+          var enemy = enemyAt(state, x, y);
+          if(state.player.x===x && state.player.y===y){
+            innerHtml = '<span class="piece player pop">'+GLYPH[state.player.type].w+'</span>';
+          } else if(enemy){
+            innerHtml = '<span class="piece enemy">'+GLYPH[enemy.type].b+'</span>';
+          }
+        }
+        cellEl.innerHTML = innerHtml;
+      }
+    }
+    if(rebuildGrid) boardEl.appendChild(frag);
+
+    // (re)bind clicks once via delegation - see init()
+  }
+
+  boardEl.addEventListener('click', function(ev){
+    var cell = ev.target.closest('.cell.legal');
+    if(!cell) return;
+    attemptMove(parseInt(cell.dataset.x,10), parseInt(cell.dataset.y,10));
+  });
+
+  window.addEventListener('resize', function(){ if(state) render(true); });
+
+  /* ===================== Overlays ===================== */
+  function showOverlay(id){ document.getElementById(id).classList.add('show'); }
+  function hideOverlay(id){ document.getElementById(id).classList.remove('show'); }
+  function hideAllOverlays(){
+    ['win-overlay','lose-overlay','levels-overlay','help-overlay'].forEach(hideOverlay);
+  }
+
+  /* ===================== Level select ===================== */
+  function renderLevelList(){
+    var container = document.getElementById('level-list');
+    container.innerHTML = '';
+    LEVELS.forEach(function(lvl, i){
+      var unlocked = i < progress.unlocked;
+      var item = document.createElement('div');
+      item.className = 'level-item' + (unlocked ? '' : ' locked');
+      var best = progress.best[String(i)];
+      item.innerHTML =
+        '<div class="num">' + (unlocked ? (i+1) : '🔒') + '</div>' +
+        '<div class="info"><div class="lname">'+lvl.name+'</div>' +
+        '<div class="lbest">' + (best!==undefined ? 'Лучший результат: '+best+' '+pluralMoves(best) : 'Лимит: '+lvl.moveLimit+' '+pluralMoves(lvl.moveLimit)) + '</div></div>';
+      if(unlocked){
+        item.addEventListener('click', function(){
+          hideOverlay('levels-overlay');
+          loadLevel(i);
+        });
+      }
+      container.appendChild(item);
+    });
+  }
+
+  /* ===================== Wire up UI ===================== */
+  document.getElementById('restart-btn').addEventListener('click', function(){ loadLevel(currentLevelIdx); });
+  document.getElementById('levels-btn').addEventListener('click', function(){ renderLevelList(); showOverlay('levels-overlay'); });
+  document.getElementById('levels-close').addEventListener('click', function(){ hideOverlay('levels-overlay'); });
+  document.getElementById('help-btn').addEventListener('click', function(){ showOverlay('help-overlay'); });
+  document.getElementById('help-close').addEventListener('click', function(){ hideOverlay('help-overlay'); });
+  document.getElementById('win-replay').addEventListener('click', function(){ hideOverlay('win-overlay'); loadLevel(currentLevelIdx); });
+  document.getElementById('win-next').addEventListener('click', function(){
+    hideOverlay('win-overlay');
+    loadLevel(Math.min(currentLevelIdx+1, LEVELS.length-1));
+  });
+  document.getElementById('lose-retry').addEventListener('click', function(){ hideOverlay('lose-overlay'); loadLevel(currentLevelIdx); });
+
+  /* ===================== Init ===================== */
+  loadLevel(0);
+
+})();
+</script>
+</body>
+</html>
